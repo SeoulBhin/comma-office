@@ -168,13 +168,14 @@ for (const sx of [-1, 1]) {
 
 // 출근 게이트: 양쪽 받침 + 가운데로 닫히는 유리문 2장 + 카드 리더기
 const flaps = [];
+const flapMat = new THREE.MeshStandardMaterial({ color: C.accent, transparent: true, opacity: 0.45, roughness: 0.2 });
 for (const sx of [-1, 1]) {
   box(0.35, 1.05, 1.4, '#dcdad5', sx * 2.45, 0.525, 7);
   box(0.37, 0.05, 1.42, C.dark, sx * 2.45, 1.07, 7);
   const pivot = new THREE.Group();
   pivot.position.set(sx * 2.27, 0.75, 7);
   scene.add(pivot);
-  const f = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.04), glass);
+  const f = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.04), flapMat);
   f.position.x = -sx * 1.1;
   pivot.add(f);
   pivot.userData.side = sx;
@@ -273,13 +274,13 @@ const coffee = new THREE.Group();
 coffee.position.set(19.2, 1.0, -9.5);
 scene.add(coffee);
 box(0.6, 0.75, 0.55, C.dark, 0, 0.375, 0, coffee);
-box(0.5, 0.06, 0.3, '#555', -0.08, 0.06, 0, coffee);
+box(0.26, 0.03, 0.32, '#555', -0.43, 0.015, 0, coffee); // 받침(기계 앞)
 const coffeeBtn = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), new THREE.MeshBasicMaterial({ color: C.accent }));
 coffeeBtn.position.set(-0.31, 0.6, 0);
 coffeeBtn.rotation.y = -Math.PI / 2;
 coffee.add(coffeeBtn);
 const cup = new THREE.Group();
-cup.position.set(-0.1, 0.09, 0);
+cup.position.set(-0.43, 0.03, 0); // 기계 몸통(x -0.3~0.3) 밖에 둬야 보인다
 cup.visible = false;
 coffee.add(cup);
 const cupShell = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.055, 0.15, 16, 1, true), new THREE.MeshStandardMaterial({ color: '#fff', side: THREE.DoubleSide }));
@@ -348,14 +349,18 @@ for (const bx of [-4, 4]) {
 }
 for (const [x, z] of [[-11.5, -7.5], [11.5, -7.5], [-11.5, 4], [11.5, 4], [-7.5, -7.6], [7.5, -7.6]]) plant(x, z, 1.3, roof);
 // 줄 조명(밤에 켜진다)
-const bulbMat = new THREE.MeshBasicMaterial({ color: '#6b6457' });
+const bulbMat = new THREE.MeshBasicMaterial({ color: '#ece8de' });
 for (const sx of [-1, 1]) cyl(0.05, 0.05, 3, C.dark, sx * 7, 1.5, -1.5, roof, 6);
+const wire = [];
 for (let i = 0; i <= 14; i++) {
   const t = i / 14;
-  const b = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), bulbMat);
-  b.position.set(-7 + 14 * t, 2.9 - Math.sin(Math.PI * t) * 0.6, -1.5);
+  const p = new THREE.Vector3(-7 + 14 * t, 3.0 - Math.sin(Math.PI * t) * 0.6, -1.5);
+  wire.push(p);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), bulbMat);
+  b.position.copy(p).y -= 0.1;
   roof.add(b);
 }
+roof.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(wire), new THREE.LineBasicMaterial({ color: C.dark })));
 // 둘레 도시: 옥상보다 낮은 건물들. 밤엔 일부 창이 켜진다
 // 창문 무늬: 밝은 칸만 밤에 빛난다(emissiveMap)
 const winCanvas = document.createElement('canvas');
@@ -766,7 +771,7 @@ function applySky(force) {
   moonDisc.visible = s.night;
   stars.visible = s.night;
   cityLit.emissiveIntensity = s.night ? 1.0 : 0;
-  bulbMat.color.set(s.night ? '#ffd38a' : '#6b6457');
+  bulbMat.color.set(s.night ? '#ffd38a' : '#ece8de');
 }
 
 // ---------- 매 프레임 ----------
