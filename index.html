@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>쉼표(주) — 잠깐 출근해서 쉬어 가요</title>
+  <meta name="description" content="취업 준비하다 지치면 잠깐 출근해서 쉬어 가는 가상 회사. 출근 도장, 내 자리, 탕비실, 옥상.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fbf8f2'/%3E%3Ctext x='16' y='25' font-size='30' font-weight='800' text-anchor='middle' fill='%23e07a3f'%3E,%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <header id="hud-left">
+    <div class="logo">쉼표<span>,</span>(주)</div>
+    <div id="place">회사 앞</div>
+  </header>
+
+  <div id="hud-right">
+    <div id="clock">--:--</div>
+    <button id="stamp-btn" type="button">출근 0일</button>
+  </div>
+
+  <div id="hint">바닥을 눌러 이동 · 드래그로 둘러보기 · 휠로 확대/축소</div>
+  <div id="tip" hidden></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="stamp-fx" aria-hidden="true">출근</div>
+  <div id="fade"></div>
+
+  <div id="panel" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <h2 id="panel-title"></h2>
+      <div id="panel-body"></div>
+      <button id="panel-close" type="button">닫기</button>
+    </div>
+  </div>
+
+  <div id="intro">
+    <div class="card">
+      <div class="logo big">쉼표<span>,</span>(주)</div>
+      <p>취업 준비하다 지치면 잠깐 출근해서 쉬어 가요.<br>사원증을 찍고 들어가 내 자리, 탕비실, 옥상을 둘러볼 수 있어요.</p>
+      <p class="small">기록(출근 도장·포스트잇)은 이 브라우저에만 저장돼요.</p>
+      <button id="enter" type="button">출근하기</button>
+    </div>
+  </div>
+
+  <noscript>이 페이지는 JavaScript 와 WebGL 이 필요해요.</noscript>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
