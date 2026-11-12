@@ -701,6 +701,8 @@ function interact() {
   pending = null;
   a.run();
 }
+// 배포 직후엔 브라우저가 새 main.js 와 캐시된 옛 index.html(버튼 없음)을 섞어 받을 수 있다. 그래도 멈추지 않게
+if (!$('act')) document.body.insertAdjacentHTML('beforeend', '<button id="act" type="button" hidden><kbd>F</kbd><span id="act-label"></span></button>');
 $('act').onclick = interact;
 
 let actShown = '';
