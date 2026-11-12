@@ -730,8 +730,9 @@ addEventListener('keydown', (e) => {
     e.preventDefault(); // 방향키가 페이지를 스크롤하지 않게
   } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') zoomBy(1.15);
   else if (e.code === 'Equal' || e.code === 'NumpadAdd') zoomBy(1 / 1.15);
-  else if ((e.code === 'KeyF' || e.code === 'Space' || e.code === 'Enter') && !(e.target instanceof HTMLButtonElement)) {
-    e.preventDefault(); // 버튼에 포커스가 있으면 그 버튼이 Space·Enter 를 받는다
+  else if (e.code === 'KeyF' || ((e.code === 'Space' || e.code === 'Enter') && !(e.target instanceof HTMLButtonElement))) {
+    // F 는 어디에 포커스가 있든 상호작용. Space·Enter 는 버튼에 포커스가 있으면 그 버튼 몫
+    e.preventDefault();
     if (!e.repeat) interact();
   }
 });
