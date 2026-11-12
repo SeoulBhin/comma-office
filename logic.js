@@ -63,6 +63,17 @@ const LINES = [
   { z: 7, name: 'gate', needsStamp: true },
 ];
 
+// 키보드로 한 걸음(from→to) 갈 때 막히는지. 클릭 이동(planPath)과 같은 선·같은 통로를 쓴다.
+// null(지나감) | 'wall'(통로 밖에서 선을 넘음) | 'gate'(도장 없이 안쪽으로)
+export function blockedStep(from, to, stamped, gap = 2.2) {
+  for (const L of LINES) {
+    if ((from.z > L.z) === (to.z > L.z)) continue; // 이 선을 안 넘는다
+    if (Math.abs(to.x) > gap) return 'wall';
+    if (L.needsStamp && !stamped && to.z < from.z) return 'gate';
+  }
+  return null;
+}
+
 // from→to 로 갈 때 들를 점들. 도장 없이 게이트 안으로 들어가려 하면 게이트 앞에서 멈춘다.
 // 나가는 쪽(z 가 커지는 쪽)은 도장 없이도 지나간다.
 export function planPath(from, to, stamped, gap = 2.0) {

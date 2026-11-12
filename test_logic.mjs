@@ -1,6 +1,6 @@
 // node test_logic.mjs — 아무 출력 없이 끝나면 통과
 import assert from 'node:assert/strict';
-import { dayKey, addStamp, streak, skyAt, planPath } from './logic.js';
+import { dayKey, addStamp, streak, skyAt, planPath, blockedStep } from './logic.js';
 
 // 출근 도장
 assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
@@ -38,3 +38,12 @@ assert.deepEqual(r.points.at(-1), { x: 0, z: 18 });
 
 // 선을 안 넘으면 바로
 assert.deepEqual(planPath({ x: -8, z: 0 }, { x: 8, z: -5 }, false).points, [{ x: 8, z: -5 }]);
+
+// 키보드 한 걸음
+assert.equal(blockedStep({ x: 0, z: 12.1 }, { x: 0, z: 11.9 }, false), null); // 정문 가운데
+assert.equal(blockedStep({ x: 8, z: 12.1 }, { x: 8, z: 11.9 }, true), 'wall'); // 유리벽
+assert.equal(blockedStep({ x: 0, z: 7.1 }, { x: 0, z: 6.9 }, false), 'gate'); // 도장 없이 안으로
+assert.equal(blockedStep({ x: 0, z: 7.1 }, { x: 0, z: 6.9 }, true), null);
+assert.equal(blockedStep({ x: 0, z: 6.9 }, { x: 0, z: 7.1 }, false), null); // 나가는 쪽
+assert.equal(blockedStep({ x: -9, z: 7.1 }, { x: -9, z: 6.9 }, true), 'wall'); // 게이트 옆 유리 칸막이
+assert.equal(blockedStep({ x: -9, z: 7.1 }, { x: -9.1, z: 7.2 }, false), null); // 선을 안 넘음

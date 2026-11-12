@@ -29,7 +29,11 @@
     <button id="stamp-btn" type="button">출근 0일</button>
   </div>
 
-  <div id="hint">바닥을 눌러 이동 · 드래그로 둘러보기 · 휠로 확대/축소</div>
+  <div id="hint">
+    <span class="for-keys">WASD·방향키 이동 · F 하기 · Q/E 돌리기 · 바닥·물건을 눌러도 돼요</span>
+    <span class="for-touch">바닥을 눌러 이동 · 물건을 눌러 하기 · 두 손가락으로 확대</span>
+  </div>
+  <button id="act" type="button" hidden><kbd>F</kbd><span id="act-label"></span></button>
   <div id="tip" hidden></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="stamp-fx" aria-hidden="true">출근</div>
@@ -47,6 +51,8 @@
     <div class="card">
       <div class="logo big">쉼표<span>,</span>(주)</div>
       <p>취업 준비하다 지치면 잠깐 출근해서 쉬어 가요.<br>사원증을 찍고 들어가 내 자리, 탕비실, 옥상을 둘러볼 수 있어요.</p>
+      <p class="small for-keys">키보드: WASD·방향키로 걷고, 물건 앞에서 F(또는 Space·Enter). Q/E 로 화면을 돌리고 -/= 로 확대해요.<br>마우스: 바닥을 누르면 걸어가고, 물건을 누르면 그 앞까지 가서 해요. 드래그로 돌리고 휠로 확대해요.</p>
+      <p class="small for-touch">바닥을 누르면 걸어가고, 물건을 누르면 그 앞까지 가서 해요. 끌어서 돌리고 두 손가락으로 확대해요.</p>
       <p class="small">기록(출근 도장·포스트잇)은 이 브라우저에만 저장돼요.</p>
       <button id="enter" type="button">출근하기</button>
     </div>

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { dayKey, addStamp, streak, skyAt, planPath } from './logic.js';
+import { dayKey, addStamp, streak, skyAt, planPath, blockedStep } from './logic.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -509,7 +509,7 @@ actionable({
 
 actionable({
   name: '포스트잇에 할 일 적기',
-  at: local(-7.5, 2.9),
+  at: local(-8.3, 2.9), // 모니터(-7.5)보다 왼쪽: 키보드로 가까이 간 쪽이 골라진다
   run() {
     const ta = document.createElement('textarea');
     ta.value = store.get('comma.todo', '');
@@ -519,7 +519,6 @@ actionable({
       store.set('comma.todo', ta.value);
       postit.redraw(ta.value);
     });
-    ta.focus();
   },
 }, postit);
 
@@ -681,19 +680,129 @@ function goDo(action) {
   pending = action;
 }
 
+// ---------- 가까운 물건: F·Space·Enter, 또는 화면의 버튼(마우스·터치) ----------
+// 같은 층에서 서서 누를 자리(at)가 1.8 안쪽인 것 중 가장 가까운 것
+function nearAction() {
+  let best = null, bestD = 1.8;
+  for (const a of new Set(actionMeshes.map((m) => m.userData.action))) {
+    if (onRoof() !== a.at.y > 20) continue;
+    const d = Math.hypot(a.at.x - me.position.x, a.at.z - me.position.z);
+    if (d < bestD) { best = a; bestD = d; }
+  }
+  return best;
+}
+
+function interact() {
+  if (busy) return;
+  if (sitting) { standUp(); toast('일어났어요.'); return; }
+  const a = nearAction();
+  if (!a) { toast('가까이에 할 수 있는 게 없어요. 물건 앞으로 가 보세요.'); return; }
+  path = [];
+  pending = null;
+  a.run();
+}
+$('act').onclick = interact;
+
+let actShown = '';
+function refreshActButton() {
+  const a = busy ? null : nearAction();
+  const label = sitting ? '일어나기' : a ? a.name : '';
+  if (label === actShown) return;
+  actShown = label;
+  $('act').hidden = !label;
+  $('act-label').textContent = label;
+}
+
+// ---------- 키보드: WASD·방향키 이동, Q/E 화면 돌리기, -/= 확대·축소 ----------
+const MOVE = {
+  KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1],
+  KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0],
+};
+const keys = new Set();
+const typing = (t) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+const uiOpen = () => !$('panel').hidden || !$('intro').hidden;
+addEventListener('keydown', (e) => {
+  if (typing(e.target) || uiOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (MOVE[e.code] || e.code === 'KeyQ' || e.code === 'KeyE') {
+    keys.add(e.code);
+    e.preventDefault(); // 방향키가 페이지를 스크롤하지 않게
+  } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') zoomBy(1.15);
+  else if (e.code === 'Equal' || e.code === 'NumpadAdd') zoomBy(1 / 1.15);
+  else if ((e.code === 'KeyF' || e.code === 'Space' || e.code === 'Enter') && !(e.target instanceof HTMLButtonElement)) {
+    e.preventDefault(); // 버튼에 포커스가 있으면 그 버튼이 Space·Enter 를 받는다
+    if (!e.repeat) interact();
+  }
+});
+addEventListener('keyup', (e) => keys.delete(e.code));
+addEventListener('blur', () => keys.clear()); // 다른 창으로 가면 누른 키가 풀리지 않는 문제
+
+function zoomBy(f) {
+  const off = camera.position.clone().sub(controls.target);
+  off.setLength(THREE.MathUtils.clamp(off.length() * f, controls.minDistance, controls.maxDistance));
+  camera.position.copy(controls.target).add(off);
+}
+
+const UP = new THREE.Vector3(0, 1, 0);
+const fwd = new THREE.Vector3(), right = new THREE.Vector3(), step = new THREE.Vector3();
+let gateToastAt = 0;
+// 한 걸음: 통째로 막히면 x 만, z 만 따로 시도해 벽을 따라 미끄러진다
+function tryStep(d) {
+  for (const c of [d, new THREE.Vector3(d.x, 0, 0), new THREE.Vector3(0, 0, d.z)]) {
+    if (!c.lengthSq()) continue;
+    const to = clampTarget(me.position.clone().add(c));
+    const b = onRoof() ? null : blockedStep({ x: me.position.x, z: me.position.z }, { x: to.x, z: to.z }, stampedToday());
+    if (!b) { me.position.x = to.x; me.position.z = to.z; return c; }
+    if (b === 'gate' && performance.now() - gateToastAt > 3000) {
+      gateToastAt = performance.now();
+      toast('사원증을 먼저 찍어야 들어갈 수 있어요. 오른쪽 리더기 앞에서 F.');
+    }
+  }
+  return null;
+}
+
+// 누르고 있는 이동 키 → 이번 프레임에 갈 방향(카메라 기준: W 는 화면 안쪽). 걸었으면 그 방향, 아니면 null
+function keyboardMove(dt) {
+  let kx = 0, kz = 0;
+  for (const k of keys) if (MOVE[k]) { kx += MOVE[k][0]; kz += MOVE[k][1]; }
+  const turn = (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0);
+  if (turn) {
+    const off = camera.position.clone().sub(controls.target).applyAxisAngle(UP, turn * dt * 1.8);
+    camera.position.copy(controls.target).add(off);
+  }
+  if ((!kx && !kz) || busy) return null;
+  path = []; // 키를 누르면 클릭으로 가던 길은 취소
+  pending = null;
+  standUp();
+  camera.getWorldDirection(fwd);
+  fwd.y = 0;
+  fwd.normalize();
+  right.crossVectors(fwd, UP);
+  step.copy(fwd).multiplyScalar(kz).addScaledVector(right, kx);
+  if (!step.lengthSq()) return null;
+  step.setLength(SPEED * dt);
+  return tryStep(step);
+}
+
 // ---------- 패널 ----------
 let panelClose = null;
+let panelReturn = null; // 닫으면 포커스를 돌려줄 곳(키보드 사용자)
 function openPanel(title, node, onClose) {
+  panelReturn = document.activeElement instanceof HTMLButtonElement ? document.activeElement : null;
+  keys.clear();
   $('panel-title').textContent = title;
   $('panel-body').replaceChildren(node);
   $('panel').hidden = false;
   panelClose = onClose;
+  ($('panel-body').querySelector('textarea, button') || $('panel-close')).focus();
 }
 function closePanel() {
   if ($('panel').hidden) return;
   $('panel').hidden = true;
   panelClose?.();
   panelClose = null;
+  if (panelReturn) panelReturn.focus();
+  else document.activeElement?.blur(); // 닫자마자 Space 가 버튼을 다시 누르지 않게
+  panelReturn = null;
 }
 $('panel-close').onclick = closePanel;
 $('panel').addEventListener('pointerdown', (e) => { if (e.target === $('panel')) closePanel(); });
@@ -723,6 +832,7 @@ $('stamp-btn').onclick = () => {
 
 $('enter').onclick = () => {
   $('intro').hidden = true;
+  $('enter').blur();
   toast(stampedToday() ? '오늘은 이미 출근했어요. 들어가서 쉬어 가요.' : '정문으로 들어가서 사원증을 찍어 보세요.');
 };
 
@@ -779,6 +889,11 @@ const clock = new THREE.Clock();
 const SPEED = 4.2;
 const tmp = new THREE.Vector3();
 let walkT = 0;
+function face(d, dt) {
+  let diff = Math.atan2(d.x, d.z) - me.rotation.y;
+  diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+  me.rotation.y += diff * Math.min(1, dt * 12);
+}
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   let walking = false;
@@ -795,13 +910,12 @@ function frame() {
     } else {
       tmp.multiplyScalar(step / dist);
       me.position.add(tmp);
-      const want = Math.atan2(tmp.x, tmp.z);
-      let diff = want - me.rotation.y;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      me.rotation.y += diff * Math.min(1, dt * 12);
+      face(tmp, dt);
       walking = true;
     }
   }
+  const moved = keyboardMove(dt);
+  if (moved) { face(moved, dt); walking = true; }
   // 걷기·앉기 자세
   walkT = walking ? walkT + dt * 10 : 0;
   const { legs, arms } = me.userData;
@@ -838,6 +952,7 @@ function frame() {
 
   applySky(false);
   $('place').textContent = placeName();
+  refreshActButton();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -851,9 +966,10 @@ addEventListener('resize', () => {
 
 // ?debug 를 붙이면 콘솔에서 상태를 만질 수 있다(시험·캡처용)
 if (new URLSearchParams(location.search).has('debug')) {
-  window.comma = { THREE, scene, me, camera, controls, actions: actionMeshes.map((m) => m.userData.action), goDo, goTo, get path() { return path; }, stampedToday };
+  window.comma = { THREE, scene, me, camera, controls, actions: actionMeshes.map((m) => m.userData.action), goDo, goTo, interact, nearAction, get path() { return path; }, stampedToday };
 }
 
 refreshHud();
 applySky(true);
+$('enter').focus(); // 키보드만 쓰는 사람도 Enter 로 바로 시작
 frame();
